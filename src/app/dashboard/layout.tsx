@@ -82,8 +82,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             if (data) {
                 setProfile(data as Profile)
+                setLoading(false)
+            } else {
+                // If profile missing, wait a bit and retry (might be trigger delay)
+                console.log('Profile missing, retrying in 1.5s...')
+                setTimeout(async () => {
+                    const { data: retryData } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', user.id)
+                        .single()
+                    
+                    if (retryData) {
+                        setProfile(retryData as Profile)
+                    }
+                    setLoading(false)
+                }, 1500)
             }
-            setLoading(false)
         }
 
         loadProfile()
@@ -106,7 +121,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )
     }
 
-    if (!profile) return null
+    if (!profile) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+                <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+                    <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <AlertTriangle size={32} />
+                    </div>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Profile Not Found</h2>
+                    <p className="text-gray-600 mb-6">
+                        We couldn't find a profile for your user ID. This usually happens if the 
+                        <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm text-indigo-600 mx-1">seed.sql</code> 
+                        hasn't been run or the UUIDs don't match.
+                    </p>
+                    <div className="space-y-3">
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="w-full bg-indigo-600 text-white py-2 rounded-xl font-medium hover:bg-indigo-700 transition-all"
+                        >
+                            Retry
+                        </button>
+                        <button
+                            onClick={handleLogout}
+                            className="w-full bg-gray-100 text-gray-600 py-2 rounded-xl font-medium hover:bg-gray-200 transition-all"
+                        >
+                            Back to Login
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
     const navItems = NAV_ITEMS[profile.role] || []
 

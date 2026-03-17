@@ -13,51 +13,78 @@ const DEMO_CREDENTIALS = [
 ]
 
 export default function LoginPage() {
+    const [isSignUp, setIsSignUp] = useState(false)
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [fullName, setFullName] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState('')
+    const [success, setSuccess] = useState('')
     const [loading, setLoading] = useState(false)
     const [copiedEmail, setCopiedEmail] = useState<string | null>(null)
     const router = useRouter()
     const supabase = createClient()
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
+        setSuccess('')
         setLoading(true)
 
         try {
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            })
+            if (isSignUp) {
+                const { error: signUpError } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            full_name: fullName,
+                        },
+                    },
+                })
 
-            if (signInError) {
-                setError(signInError.message)
-                setLoading(false)
-                return
+                if (signUpError) {
+                    setError(signUpError.message)
+                    setLoading(false)
+                    return
+                }
+                setSuccess('Account created! Please check your email or sign in.')
+                setIsSignUp(false)
+            } else {
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
+                })
+
+                if (signInError) {
+                    setError(signInError.message)
+                    setLoading(false)
+                    return
+                }
+                router.push('/dashboard')
+                router.refresh()
             }
-
-            // Redirect to dashboard — middleware handles role-based routing
-            router.push('/dashboard')
-            router.refresh()
         } catch {
             setError('An unexpected error occurred')
+        } finally {
             setLoading(false)
         }
     }
 
     const fillCredentials = (email: string, password: string) => {
+        setIsSignUp(false)
         setEmail(email)
         setPassword(password)
         setError('')
+        setSuccess('')
     }
 
     const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text)
-        setCopiedEmail(text)
-        setTimeout(() => setCopiedEmail(null), 2000)
+        if (typeof window !== 'undefined' && navigator.clipboard) {
+            navigator.clipboard.writeText(text)
+            setCopiedEmail(text)
+            setTimeout(() => setCopiedEmail(null), 2000)
+        }
     }
 
     return (
@@ -68,13 +95,34 @@ export default function LoginPage() {
                     <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl mb-4 shadow-lg shadow-indigo-200">
                         <span className="text-white font-bold text-2xl tracking-tight">JSO</span>
                     </div>
-                    <h1 className="text-2xl font-semibold text-gray-900">Welcome back</h1>
-                    <p className="text-gray-500 mt-1">Sign in to the JSO platform</p>
+                    <h1 className="text-2xl font-semibold text-gray-900">
+                        {isSignUp ? 'Create an account' : 'Welcome back'}
+                    </h1>
+                    <p className="text-gray-500 mt-1">
+                        {isSignUp ? 'Join the JSO candidate platform' : 'Sign in to the JSO platform'}
+                    </p>
                 </div>
 
-                {/* Login Form */}
+                {/* Auth Form */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-                    <form onSubmit={handleLogin} className="space-y-5">
+                    <form onSubmit={handleAuth} className="space-y-5">
+                        {isSignUp && (
+                            <div>
+                                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1.5">
+                                    Full Name
+                                </label>
+                                <input
+                                    id="fullName"
+                                    type="text"
+                                    value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    placeholder="Enter your full name"
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                    required={isSignUp}
+                                />
+                            </div>
+                        )}
+
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
                                 Email
@@ -120,6 +168,12 @@ export default function LoginPage() {
                             </div>
                         )}
 
+                        {success && (
+                            <div className="bg-emerald-50 text-emerald-600 text-sm px-4 py-3 rounded-xl border border-emerald-200">
+                                {success}
+                            </div>
+                        )}
+
                         <button
                             type="submit"
                             disabled={loading}
@@ -130,11 +184,24 @@ export default function LoginPage() {
                             ) : (
                                 <>
                                     <LogIn size={18} />
-                                    Sign In
+                                    {isSignUp ? 'Create Account' : 'Sign In'}
                                 </>
                             )}
                         </button>
                     </form>
+
+                    <div className="mt-6 pt-6 border-t border-gray-100 text-center">
+                        <button
+                            onClick={() => {
+                                setIsSignUp(!isSignUp)
+                                setError('')
+                                setSuccess('')
+                            }}
+                            className="text-sm text-indigo-600 font-medium hover:text-indigo-700"
+                        >
+                            {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Demo Credentials */}
