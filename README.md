@@ -133,7 +133,3 @@ GROQ_API_KEY=your_groq_api_key
 2. Add the 4 environment variables listed above in the Vercel project settings.
 3. Deployment will happen automatically on every push to `master`.
 
----
-
-## 📄 Assignment Reference
-This project fulfills the requirements of **Part B: Main Task Execution** for the JSO Phase-2 internship assignment. Full written answers and architecture details can be found in `assignment_answers.md`.
